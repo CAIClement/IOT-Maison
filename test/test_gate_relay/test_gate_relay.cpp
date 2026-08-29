@@ -80,11 +80,78 @@ void test_contact_s_ouvre_a_la_fin_de_l_impulsion() {
     TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
 }
 
+void test_trigger_refuse_pendant_l_impulsion() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;
+    relay.trigger();
+    const int writesAvant = g_writeCount;
+
+    g_now = 5200;
+    const bool accepted = relay.trigger();
+
+    TEST_ASSERT_FALSE(accepted);
+    TEST_ASSERT_EQUAL(writesAvant, g_writeCount);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Pulsing);
+}
+
+void test_trigger_refuse_pendant_le_verrou() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;
+    relay.trigger();
+    g_now = 5400;
+    relay.update();  // -> Lockout
+
+    g_now = 6000;
+    const bool accepted = relay.trigger();
+
+    TEST_ASSERT_FALSE(accepted);
+    TEST_ASSERT_FALSE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
+}
+
+void test_retour_au_repos_a_la_fin_du_verrou() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;
+    relay.trigger();
+    g_now = 5400;
+    relay.update();  // -> Lockout
+
+    g_now = 7400;  // 2000 ms de verrou ecoulees
+    relay.update();
+
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Idle);
+    TEST_ASSERT_FALSE(g_closed);
+}
+
+void test_trigger_accepte_apres_un_cycle_complet() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;
+    relay.trigger();
+    g_now = 5400;
+    relay.update();
+    g_now = 7400;
+    relay.update();  // -> Idle
+
+    const bool accepted = relay.trigger();
+
+    TEST_ASSERT_TRUE(accepted);
+    TEST_ASSERT_TRUE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Pulsing);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_begin_ouvre_le_contact);
     RUN_TEST(test_trigger_ferme_le_contact);
     RUN_TEST(test_contact_reste_ferme_avant_la_fin_de_l_impulsion);
     RUN_TEST(test_contact_s_ouvre_a_la_fin_de_l_impulsion);
+    RUN_TEST(test_trigger_refuse_pendant_l_impulsion);
+    RUN_TEST(test_trigger_refuse_pendant_le_verrou);
+    RUN_TEST(test_retour_au_repos_a_la_fin_du_verrou);
+    RUN_TEST(test_trigger_accepte_apres_un_cycle_complet);
     return UNITY_END();
 }

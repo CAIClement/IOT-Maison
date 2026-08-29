@@ -27,6 +27,7 @@ void GateRelay::update() {
         if (elapsed >= config_.pulseMs) enter(State::Lockout, false);
         break;
     case State::Lockout:
+        if (elapsed >= config_.lockoutMs) enter(State::Idle, false);
         break;
     case State::Idle:
         break;
