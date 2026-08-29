@@ -26,7 +26,12 @@ public:
 
     GateRelay(WriteFn write, ClockFn clock, const Config& config);
 
-    /** Met le contact au repos. A appeler une fois au demarrage. */
+    /**
+     * Met le contact au repos. A appeler une fois au demarrage.
+     *
+     * Ne configure PAS la broche : c'est a l'appelant de faire digitalWrite(LOW)
+     * AVANT pinMode(OUTPUT), pour eviter un front haut d'un cycle d'horloge.
+     */
     void begin();
 
     /**
@@ -35,7 +40,14 @@ public:
      */
     bool trigger();
 
-    /** Fait avancer la machine a etats. A appeler a chaque tour de boucle. */
+    /**
+     * Fait avancer la machine a etats. A appeler a chaque tour de boucle.
+     *
+     * pulseMs est une borne BASSE de la duree de fermeture, pas une borne haute :
+     * si update() est appele en retard, le contact reste ferme jusqu'a cet appel.
+     * La boucle principale ne doit donc contenir aucun appel bloquant de plus de
+     * quelques millisecondes tant que isBusy() est vrai.
+     */
     void update();
 
     State state() const { return state_; }

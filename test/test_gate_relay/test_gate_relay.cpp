@@ -119,6 +119,10 @@ void test_retour_au_repos_a_la_fin_du_verrou() {
     g_now = 5400;
     relay.update();  // -> Lockout
 
+    g_now = 7399;  // 1999 ms de verrou ecoulees sur 2000
+    relay.update();
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
+
     g_now = 7400;  // 2000 ms de verrou ecoulees
     relay.update();
 
@@ -175,11 +179,40 @@ void test_impulsion_robuste_au_rollover_de_millis() {
     relay.trigger();
     TEST_ASSERT_TRUE(g_closed);
 
+    g_now = 0xFFFFFF50;  // 80 ms seulement apres le declenchement
+    relay.update();
+    TEST_ASSERT_TRUE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Pulsing);
+
     g_now = 0x00000090;  // 256 + 144 = 400 ms plus tard, apres le rollover
     relay.update();
 
     TEST_ASSERT_FALSE(g_closed);
     TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
+}
+
+// update() peut etre appele en retard si la boucle principale bloque. Le contact
+// reste alors ferme plus longtemps que pulseMs -- c'est une borne basse, pas une
+// borne haute. Mais le verrou qui suit doit durer 2000 ms pleines A PARTIR de
+// l'appel tardif, jamais moins.
+void test_verrou_complet_apres_un_update_tardif() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;
+    relay.trigger();
+
+    g_now = 20000;  // 15 s de retard : la boucle a bloque
+    relay.update();
+    TEST_ASSERT_FALSE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
+
+    g_now = 21999;
+    relay.update();
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
+
+    g_now = 22000;
+    relay.update();
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Idle);
 }
 
 int main(int, char**) {
@@ -195,5 +228,6 @@ int main(int, char**) {
     RUN_TEST(test_trigger_refuse_pendant_la_garde_de_boot);
     RUN_TEST(test_trigger_accepte_a_la_fin_de_la_garde_de_boot);
     RUN_TEST(test_impulsion_robuste_au_rollover_de_millis);
+    RUN_TEST(test_verrou_complet_apres_un_update_tardif);
     return UNITY_END();
 }
