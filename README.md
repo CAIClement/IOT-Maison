@@ -49,8 +49,8 @@ exclu de la compilation native (`build_src_filter`). C'est la seule barrière.
 
 | # | Test | Critère | Date | Résultat |
 | --- | --- | --- | --- | --- |
-| 0 | Appui sur le bouton de l'appli | Deux clics du relais espacés d'environ 400 ms | | |
-| 1 | Débrancher / rebrancher l'USB × 5 | Le relais **ne claque jamais** au démarrage | | |
+| 0 | Appui sur le bouton de l'appli | Deux clics du relais espacés d'environ 400 ms | 2026-08-30 | ✅ OK |
+| 1 | Débrancher / rebrancher l'USB × 5 | Le relais **ne claque jamais** au démarrage | 2026-08-30 | ✅ OK |
 | 2 | Couper le WiFi 2 min, puis le rétablir | Repasse *online* seul, sans intervention | | |
 | 5 | Double appui rapide | Une seule impulsion ; la 2ᵉ commande est `refusee` au moniteur série | | |
 
