@@ -1,0 +1,13 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# VS Code
+.vscode/
+
+# Secrets — ne JAMAIS commiter : ce fichier contient le jeton qui ouvre le portail
+src/secrets.h
+
+# Divers
+*.log
