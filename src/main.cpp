@@ -80,7 +80,7 @@ void setup() {
     Serial.println(F("\n[portail] demarrage"));
 
     // Filet de securite : si loop() se bloque malgre tout, le chien de garde
-    // materiel redemarre la carte. Un reset libere GPIO26, et la resistance de
+    // materiel redemarre la carte. Un reset libere GPIO18, et la resistance de
     // tirage ouvre le contact. Toutes les operations bloquantes de loop() sont
     // desormais bornees a ~2 s, bien en dessous du seuil du chien de garde.
     enableLoopWDT();

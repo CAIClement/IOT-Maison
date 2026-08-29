@@ -11,9 +11,9 @@ Conception : `docs/superpowers/specs/2026-08-29-portail-blynk-esp32-design.md`
 | --- | --- |
 | `VCC` | `3V3` |
 | `GND` | `GND` |
-| `IN` | `GPIO26` |
+| `IN` | `GPIO18` |
 
-**Résistance 10 kΩ entre `GPIO26` et `GND`** — obligatoire. Sans elle, la broche
+**Résistance 10 kΩ entre `GPIO18` et `GND`** — obligatoire. Sans elle, la broche
 flotte pendant le boot et le relais peut se fermer tout seul, ouvrant le portail
 à chaque coupure de courant.
 

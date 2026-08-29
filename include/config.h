@@ -4,9 +4,9 @@
 
 // --- Broches -----------------------------------------------------------------
 
-// GPIO26 : ni strapping pin, ni broche emettant un signal au reset.
+// GPIO18 : ni strapping pin, ni broche emettant un signal au reset.
 // IMPERATIF : resistance de 10 kOhm entre cette broche et GND.
-constexpr uint8_t kRelayPin = 26;
+constexpr uint8_t kRelayPin = 18;
 
 // LED integree de la carte ESP32 DevKit.
 constexpr uint8_t kStatusLedPin = 2;
