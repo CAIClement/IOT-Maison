@@ -75,6 +75,22 @@ plan initial et sont les plus importants des sept ci-dessus.
 | --- | --- | --- | --- | --- |
 | 7 | Relais relié à une LED ou un buzzer (**pas au portail**) : appuyer sur Ouvrir tout en coupant le point d'accès, ou en éloignant la carte. ~20 répétitions | Une coupure **en plein message** est le déclencheur du défaut corrigé en `2b8460c`. Aucune fermeture ne doit dépasser ~0,5 s | | |
 | 8 | Mesurer la durée de fermeture sur ~20 appuis (2ᵉ ESP32, oscilloscope, ou ralenti du téléphone sur la LED du relais) | `pulseMs` est une borne **basse** : rien ne vérifie la borne haute | | |
-| 9 | Dans la console Blynk, relever l'option *« Sync with latest server value every time device connects »* du datastream `V0`. Puis : appui long, tuer l'appli en plein appui, redémarrer l'ESP32 | Une valeur `1` restée en mémoire serveur pourrait rouvrir le portail à chaque reconnexion. La garde anti-rejeu de 3 s doit l'absorber | | |
+| 9 | Appui long sur Ouvrir, tuer l'appli en plein appui, puis redémarrer l'ESP32 | Le portail ne doit **pas** s'ouvrir à la reconnexion | | |
 | 10 | Ponter `SbS` volontairement 3 s, puis 10 s, et noter la réaction de la CL201 | Donne la marge réelle tolérable sur un contact maintenu. À faire **avant** de faire confiance au relais | | |
 | 11 | Laisser tourner 24–48 h au portail, compter les redémarrages (LED ou moniteur série) | Le WiFi y est limite ; c'est la seule façon de savoir si le lien tient | | |
+
+### Réglage Blynk du datastream `V0`
+
+Constaté dans la console le 2026-08-29 : l'option **« Synchroniser avec la
+dernière valeur du serveur lors de la reconnexion »** est **désactivée par
+défaut**. La documentation Blynk ne l'indiquait nulle part.
+
+La laisser désactivée. Si elle était activée, un `1` resté en mémoire côté
+serveur — appui dont le relâchement n'a jamais atteint le serveur, appli tuée en
+plein appui — serait rejoué à chaque reconnexion et ouvrirait le portail sans
+personne. Combiné au redémarrage automatique après 5 min de déconnexion, ça
+pourrait cycler le portail toute la nuit.
+
+La garde `kSyncGuardMs` de 3 s dans `src/main.cpp` couvre ce cas de toute façon :
+une valeur poussée par le serveur arrive immédiatement après la connexion, un
+appui humain non. Le réglage et la garde sont deux barrières indépendantes.
