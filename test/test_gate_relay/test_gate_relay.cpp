@@ -143,6 +143,45 @@ void test_trigger_accepte_apres_un_cycle_complet() {
     TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Pulsing);
 }
 
+void test_trigger_refuse_pendant_la_garde_de_boot() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 2999;  // garde de boot = 3000 ms
+
+    const bool accepted = relay.trigger();
+
+    TEST_ASSERT_FALSE(accepted);
+    TEST_ASSERT_FALSE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Idle);
+}
+
+void test_trigger_accepte_a_la_fin_de_la_garde_de_boot() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 3000;
+
+    const bool accepted = relay.trigger();
+
+    TEST_ASSERT_TRUE(accepted);
+    TEST_ASSERT_TRUE(g_closed);
+}
+
+// millis() repasse a 0 apres environ 49 jours. Les comparaisons de duree
+// doivent utiliser une soustraction non signee, jamais "date_de_fin <= now".
+void test_impulsion_robuste_au_rollover_de_millis() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 0xFFFFFF00;  // 256 ms avant le rollover
+    relay.trigger();
+    TEST_ASSERT_TRUE(g_closed);
+
+    g_now = 0x00000090;  // 256 + 144 = 400 ms plus tard, apres le rollover
+    relay.update();
+
+    TEST_ASSERT_FALSE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_begin_ouvre_le_contact);
@@ -153,5 +192,8 @@ int main(int, char**) {
     RUN_TEST(test_trigger_refuse_pendant_le_verrou);
     RUN_TEST(test_retour_au_repos_a_la_fin_du_verrou);
     RUN_TEST(test_trigger_accepte_apres_un_cycle_complet);
+    RUN_TEST(test_trigger_refuse_pendant_la_garde_de_boot);
+    RUN_TEST(test_trigger_accepte_a_la_fin_de_la_garde_de_boot);
+    RUN_TEST(test_impulsion_robuste_au_rollover_de_millis);
     return UNITY_END();
 }

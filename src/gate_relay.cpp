@@ -15,6 +15,10 @@ void GateRelay::begin() {
 
 bool GateRelay::trigger() {
     if (state_ != State::Idle) return false;
+    // Garde de demarrage : on refuse toute commande tant que la carte vient de
+    // booter. Redondant avec la resistance de tirage sur GPIO26, volontairement.
+    // Se re-arme 3 s tous les ~49 jours au rollover de millis() : sans importance.
+    if (clock_() < config_.bootGuardMs) return false;
     enter(State::Pulsing, true);
     return true;
 }
