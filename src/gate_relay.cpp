@@ -14,10 +14,23 @@ void GateRelay::begin() {
 }
 
 bool GateRelay::trigger() {
-    return false;
+    if (state_ != State::Idle) return false;
+    enter(State::Pulsing, true);
+    return true;
 }
 
 void GateRelay::update() {
+    const uint32_t elapsed = clock_() - stateEnteredAt_;
+
+    switch (state_) {
+    case State::Pulsing:
+        if (elapsed >= config_.pulseMs) enter(State::Lockout, false);
+        break;
+    case State::Lockout:
+        break;
+    case State::Idle:
+        break;
+    }
 }
 
 void GateRelay::enter(State next, bool closed) {

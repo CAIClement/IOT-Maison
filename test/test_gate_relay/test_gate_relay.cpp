@@ -41,8 +41,50 @@ void test_begin_ouvre_le_contact() {
     TEST_ASSERT_FALSE(relay.isBusy());
 }
 
+void test_trigger_ferme_le_contact() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;  // au-dela de la garde de boot
+
+    const bool accepted = relay.trigger();
+
+    TEST_ASSERT_TRUE(accepted);
+    TEST_ASSERT_TRUE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Pulsing);
+    TEST_ASSERT_TRUE(relay.isBusy());
+}
+
+void test_contact_reste_ferme_avant_la_fin_de_l_impulsion() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;
+    relay.trigger();
+
+    g_now = 5399;  // 399 ms ecoulees sur 400
+    relay.update();
+
+    TEST_ASSERT_TRUE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Pulsing);
+}
+
+void test_contact_s_ouvre_a_la_fin_de_l_impulsion() {
+    GateRelay relay = makeRelay();
+    relay.begin();
+    g_now = 5000;
+    relay.trigger();
+
+    g_now = 5400;  // pile 400 ms
+    relay.update();
+
+    TEST_ASSERT_FALSE(g_closed);
+    TEST_ASSERT_TRUE(relay.state() == GateRelay::State::Lockout);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_begin_ouvre_le_contact);
+    RUN_TEST(test_trigger_ferme_le_contact);
+    RUN_TEST(test_contact_reste_ferme_avant_la_fin_de_l_impulsion);
+    RUN_TEST(test_contact_s_ouvre_a_la_fin_de_l_impulsion);
     return UNITY_END();
 }
