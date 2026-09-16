@@ -3,7 +3,84 @@
 Ouvre le portail (automatisme Nice CL201R10) depuis l'application Blynk, via un
 ESP32 qui simule un appui sur bouton mural filaire.
 
-Conception : `docs/superpowers/specs/2026-08-29-portail-blynk-esp32-design.md`
+![ESP32](https://img.shields.io/badge/ESP32-Arduino-00979D)
+![PlatformIO](https://img.shields.io/badge/build-PlatformIO-orange)
+![Tests](https://img.shields.io/badge/tests%20unitaires-20%20%2F%2020-brightgreen)
+![C++](https://img.shields.io/badge/C%2B%2B-14-blue)
+
+## En bref
+
+Le portail de la maison s'ouvre avec une télécommande radio. Ce projet ajoute un
+bouton dans une application mobile, utilisable **de n'importe où** (4G ou WiFi),
+sans rien retirer à l'existant : la télécommande continue de fonctionner.
+
+L'ESP32 reçoit la commande depuis Blynk Cloud et ferme un relais 400 ms sur
+l'entrée « bouton mural » de l'automatisme, exactement comme un appui manuel.
+
+```
+Téléphone ──► Blynk Cloud ──► Box ── WiFi ──► ESP32 ──► Relais ──► Entrée SbS du portail
+```
+
+## Points techniques
+
+Un relais qui commande un portail doit surtout **ne jamais se déclencher tout
+seul**. L'essentiel du travail porte là-dessus :
+
+- **Aucun déclenchement au démarrage** — résistance de pull-down matérielle,
+  broche mise à l'état bas *avant* d'être passée en sortie, et garde logicielle
+  de 3 s après le boot. Version du framework épinglée, car arduino-esp32 3.x
+  casse cet ordre d'initialisation sans prévenir.
+- **Anti-rebond et verrou** — machine à états `Idle → Pulsing → Lockout` : une
+  rafale d'appuis ne produit qu'une impulsion toutes les 2,4 s. Vérifié sur
+  table avec ~20 appuis consécutifs.
+- **Pas de commande rejouée** — une valeur restée en mémoire côté serveur et
+  renvoyée à la reconnexion est ignorée, pour que le portail ne s'ouvre pas seul
+  après une coupure réseau.
+- **WiFi en limite de portée** — tentatives de reconnexion espacées et bornées
+  dans le temps, lancées uniquement relais au repos pour ne jamais prolonger une
+  impulsion, et redémarrage automatique après 5 min hors ligne.
+- **Logique testable sans la carte** — le relais, le watchdog et la LED d'état
+  ne dépendent pas d'Arduino : la sortie et l'horloge sont injectées. 20 tests
+  unitaires tournent sur PC, y compris le débordement de `millis()` après
+  49 jours.
+- **Secrets hors du dépôt** — le jeton Blynk permet d'ouvrir le portail : il vit
+  dans `src/secrets.h`, ignoré par git. Seul un modèle aux valeurs factices est
+  versionné.
+
+## Matériel
+
+- ESP32 DevKit (ELEGOO, USB-C)
+- Module relais 1 canal optocouplé, déclenchement niveau haut
+- Résistance 10 kΩ
+- Chargeur USB-C 5 V / 2 A, boîtier étanche IP65
+- Automatisme de portail Nice CL201R10 (entrée pas-à-pas `SbS`)
+
+## Structure du dépôt
+
+```
+include/config.h          broches et temporisations
+include/, src/            GateRelay, ConnectionWatchdog, StatusLed (logique pure)
+src/main.cpp              câblage Arduino : WiFi, Blynk, boucle principale
+src/secrets.h.example     modèle des identifiants (à copier en secrets.h)
+test/                     tests unitaires Unity, exécutés en natif
+```
+
+## Choix d'architecture
+
+**ESP32 + Blynk Cloud**, retenu face à deux alternatives :
+
+- **Serveur web local sur l'ESP32** — écarté : ne fonctionne qu'à portée du WiFi
+  de la maison, donc inutilisable en arrivant en voiture, le cas d'usage
+  principal.
+- **Home Assistant / ESPHome** — écarté : impose un serveur allumé en
+  permanence, disproportionné pour un bouton unique.
+
+Le prix de ce choix est la dépendance à un service tiers et à la connexion
+internet. Il est acceptable parce que la télécommande radio reste disponible en
+repli permanent.
+
+Volontairement hors périmètre de cette version : retour d'état du portail,
+ouverture par géolocalisation, historique et notifications.
 
 ## Câblage
 
@@ -73,7 +150,7 @@ plan initial et sont les plus importants des sept ci-dessus.
 
 | # | Test | Pourquoi | Date | Résultat |
 | --- | --- | --- | --- | --- |
-| 7 | Relais relié à une LED ou un buzzer (**pas au portail**) : appuyer sur Ouvrir tout en coupant le point d'accès, ou en éloignant la carte. ~20 répétitions | Une coupure **en plein message** est le déclencheur du défaut corrigé en `2b8460c`. Aucune fermeture ne doit dépasser ~0,5 s | | |
+| 7 | Relais relié à une LED ou un buzzer (**pas au portail**) : appuyer sur Ouvrir tout en coupant le point d'accès, ou en éloignant la carte. ~20 répétitions | Une coupure **en plein message** est le déclencheur du défaut corrigé en `e9c778d`. Aucune fermeture ne doit dépasser ~0,5 s | | |
 | 8 | Mesurer la durée de fermeture sur ~20 appuis (2ᵉ ESP32, oscilloscope, ou ralenti du téléphone sur la LED du relais) | `pulseMs` est une borne **basse** : rien ne vérifie la borne haute | | |
 | 9 | Appui long sur Ouvrir, tuer l'appli en plein appui, puis redémarrer l'ESP32 | Le portail ne doit **pas** s'ouvrir à la reconnexion | | |
 | 10 | Ponter `SbS` volontairement 3 s, puis 10 s, et noter la réaction de la CL201 | Donne la marge réelle tolérable sur un contact maintenu. À faire **avant** de faire confiance au relais | | |
